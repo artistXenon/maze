@@ -10,7 +10,7 @@ export default class Union {
     * so we know when removing a wall will connect disconnected parts of the maze 
     */
     find(cell: number) {
-        let t: number, src = cell;
+        let t: number;
         const paths: number[] = [];
         // find root
         while ((t = this.array[cell]) > -1 ) {
