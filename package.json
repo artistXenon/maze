@@ -1,0 +1,29 @@
+{
+  "name": "maze",
+  "version": "1.0.0",
+  "description": "maze generation/solution",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/artistXenon/maze.git"
+  },
+  "keywords": [
+    "maze",
+    "ts"
+  ],
+  "author": "Ailre",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/artistXenon/maze/issues"
+  },
+  "homepage": "https://github.com/artistXenon/maze#readme",
+  "dependencies": {
+    "typescript": "^5.0.2",
+    "vite": "^4.3.2"
+  }
+}

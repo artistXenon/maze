@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <title>maze</title>
+  </head>
+  <body>
+    <table class="wrap noprint">
+        <tr>
+            <td></td>
+            <td class="buttons">
+                <input id="new-maze" type="button" class="button" value="New Maze">
+            </td>
+            <td class="buttons">
+                <input id="new-sol" type="button" class="solveButton" value="Solve">
+                <input id="dest-sol" type="button" class="solveButton" value="Unslove">
+            </td>
+        </tr>
+    </table>
+
+    <canvas width="800" height="1000" id="canvas"></canvas>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
