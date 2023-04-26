@@ -1,7 +1,6 @@
 import Maze from './maze';
 import Solver from './solver';
 import './style.css'
-import typescriptLogo from './typescript.svg'
 
 
 let maze: Maze, solver: Solver;
