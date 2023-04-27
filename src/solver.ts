@@ -39,7 +39,7 @@ export default class Solver {
                         tx >= 0 && tx < this.maze.width && 
                         ty >= 0 && ty < this.maze.height && 
                         solution_state[ty][tx] === 0 &&
-                        this.maze.data[wallr + walldiff[n]]!.clr
+                        this.maze.data[wallr + walldiff[n]] === 0
                     ) {
                         treeCount++;
                         level.push([tx, ty]);

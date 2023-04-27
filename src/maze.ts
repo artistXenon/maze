@@ -6,18 +6,11 @@ interface WallPosition {
     vertical: boolean;
 }
 
-interface WallDetail {
-    clr: boolean;
-    typ: number;
-}
-
-
 export default class Maze {
     public width: number; 
     public height: number;
-
-    public weights;
-    public data: (WallDetail | null)[];
+    public weights: number[];
+    public data: number[];
 
     // private
     private wallqs: WallPosition[][] = [
@@ -25,42 +18,46 @@ export default class Maze {
         [], [], [],
         [], [], []
     ];
-    private union: Union | undefined;
+
+    private union: Union = new Union(0);
 
     constructor(
         w = 27, h = 18, 
-        weights = {
-            PV33: 12, PV23: 10, PV13: 14, 
-            PV22: 10, PV12: 8, PV11: 2
-        }, 
-        data?: WallDetail[]
+        weights = 
+        [
+            12, 10, 14,
+            10, 10, 8,
+            14, 8, 2
+        ], 
+        data?: number[]
     ) {
         const size = w * h * 2;
         this.width = w;
         this.height = h;
+
         if (data && data.length === size) this.data = data;
         else this.data = new Array(size);
-        const {
-            PV33, PV23, PV13, 
-            PV22, PV12, 
-            PV11 
-        } = weights;
-        this.weights = [
-            PV33, PV23, PV13, 
-            PV23, PV22, PV12, 
-            PV13, PV12, PV11
-        ];
+
+        this.weights = weights;
+
         for (let i = 0; i < this.weights.length; i++) {
             this.weights[i] = Math.pow(2.0, this.weights[i] * 0.5);
         }
     }
 
-    getWall(wall_pos: WallPosition): WallDetail | null {
+    setWall(wall_pos: WallPosition, wall: number) {
+        const { x, y, vertical } = wall_pos;
+        if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
+            this.data[(y * this.width + x) * 2 + (vertical ? 0 : 1)] = wall;
+        }
+    }
+
+    getWall(wall_pos: WallPosition): number {
         const { x, y, vertical } = wall_pos;
         if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             return this.data[(y * this.width + x) * 2 + (vertical ? 0 : 1)];
         }
-        return null;
+        return -1;
     }
 
     getNeighbours(wall_pos: WallPosition): WallPosition[] {
@@ -82,42 +79,28 @@ export default class Maze {
         ]
     }
 
-    tryWall(wall_pos: WallPosition) { 
-        const { x, y, vertical } = wall_pos;
-        const wall = this.getWall(wall_pos);
-        if (!wall || wall.clr) return false;
-
-        const c1 = y * this.width + x;
-        const c2 = c1 + (vertical ? 1 : this.width);
-
-        if (!this.union?.union(c1, c2)) return false;
-
-        wall.clr = true;
-
-        const neighbours = this.getNeighbours(wall_pos);
-        for (const neighbour of neighbours) {
-            const wall_detail = this.getWall(neighbour);
-            if (!wall_detail) continue;
-
-            const wall_neighbours = this.getNeighbours(neighbour);
-            const t1 = this.getWallEndType(wall_neighbours[0], wall_neighbours[1], wall_neighbours[2]);
-            const t2 = this.getWallEndType(wall_neighbours[3], wall_neighbours[4], wall_neighbours[5]);
-            const typ = t1 * 3 + t2;
-
-            if (typ <= wall_detail.typ) continue;
-            wall_detail.typ = typ;
-            randomInsert(this.wallqs[typ], neighbour);
-        }
-        return true;
+    /**
+     *  0  3
+     * 1 -- 4
+     *  2  5
+     * 
+     *  1
+     * 0 2
+     *  |
+     * 3 5
+     *  4
+     */
+    getWallType(w: WallPosition) {
+        const wall_neighbours = this.getNeighbours(w);
+        const t1 = this.getWallEndType(wall_neighbours[0], wall_neighbours[1], wall_neighbours[2]);
+        const t2 = this.getWallEndType(wall_neighbours[3], wall_neighbours[4], wall_neighbours[5]);
+        return t1 * 3 + t2;
     }
 
     getWallEndType(...w: WallPosition[]) {
-        const c = w.map(wall => {
-            const t = this.getWall(wall);
-            return t && t.clr;
-        });
-        if (c[1] === c[3]) return c[1] ? 2 : 0;
-        else return c[2] ? 2 : 1;
+        const c = w.map(wall => this.getWall(wall) === 0);
+        if (c[0] === c[2]) return c[0] ? 2 : 0;
+        else return c[1] ? 2 : 1;
     }
 
     generate() {
@@ -131,18 +114,18 @@ export default class Maze {
         for (let y = 0; y < this.height; ++y) {
             for(let x = 0; x < this.width; ++x) {
                 const base_index = (y * this.width + x) * 2;
-                vwall = null
+                vwall = -1
+                hwall = -1
                 if (x < this.width - 1) {
-                    vwall = { typ: 0, clr: false };
+                    vwall = 1;
                     randomInsert(this.wallqs[0], { x, y, vertical: true });
                 }
-                this.data[base_index] = vwall;
 
-                hwall = null
                 if (y < this.height - 1) {
-                    hwall = { typ: 0, clr: false };
+                    hwall = 1;
                     randomInsert(this.wallqs[0], { x, y, vertical: false });
                 }
+                this.data[base_index] = vwall;
                 this.data[base_index + 1] = hwall;
             }
         }
@@ -150,10 +133,18 @@ export default class Maze {
         //reset union
         this.union = new Union(this.data.length / 2);
 
+        let perf = 0;
+        let w, chunks = new Array(9);
         while (true) {
-            let w = 0;
-            let chunks = new Array(9);
-
+            if (perf % 100 === 0) {
+                console.log(
+                    this.wallqs[0].length, this.wallqs[1].length, this.wallqs[2].length, 
+                    this.wallqs[3].length, this.wallqs[4].length, this.wallqs[5].length, 
+                    this.wallqs[6].length, this.wallqs[7].length, this.wallqs[8].length
+                )
+            }
+            perf++;
+            w = 0;
             //select a queue randomly, weighted
             for (let i = 0; i < 9; i++) {
                 chunks[i] = this.wallqs[i].length * this.weights[i];
@@ -163,33 +154,46 @@ export default class Maze {
             if (w === 0) break;
 
             w *= Math.random();
-            chunks.pop();
             let i = 0;
-            for (const chunk of chunks) {
+            for (i = 0; i < 8; i++) {
+                const chunk = chunks[i]
                 if (w < chunk) break;
                 w -= chunk;
-                i++;
             }
-            
+
             //pop a wall from the queue and try to remove it
             const wall_pos = this.wallqs[i].pop()!;
             const wall = this.getWall(wall_pos);
-            if (wall && wall.typ === i) this.tryWall(wall_pos);
+            const wall_type = this.getWallType(wall_pos);
+
+            // try to remove wall
+            if (wall === 1 && wall_type === i) {
+                const c1 = wall_pos.y * this.width + wall_pos.x;
+                const c2 = c1 + (wall_pos.vertical ? 1 : this.width);
+
+                if (!this.union.union(c1, c2)) continue;
+
+                const neighbours = this.getNeighbours(wall_pos);
+                for (let i = 0; i < 6; i++) {
+                    this.setWall(wall_pos, 1);
+                    const n_type = this.getWallType(neighbours[i]);
+                    this.setWall(wall_pos, 0);
+                    const neighbour = this.getWall(neighbours[i]);
+                    if (neighbour === -1) continue;
+                    const typ = this.getWallType(neighbours[i]);
+                    if (typ <= n_type) continue;
+                    randomInsert(this.wallqs[typ], neighbours[i]);
+                }
+            }
         }
+        console.log(perf);
     }
 
     toString() {
         return JSON.stringify({
             size: this.width,
             data: this.data,
-            weights: {
-                PV33: this.weights[0], 
-                PV23: this.weights[1], 
-                PV13: this.weights[2], 
-                PV22: this.weights[4], 
-                PV12: this.weights[5], 
-                PV11: this.weights[8]
-            }
+            weights: this.weights
         })
     }
 
@@ -204,7 +208,6 @@ export default class Maze {
             throw new Error("corrupt serialization");
         }
         return new Maze(o.size, o.data.length / (o.size * 2), o.weights, o.data);
-
     }
 }
 
