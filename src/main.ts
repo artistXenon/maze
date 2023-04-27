@@ -71,9 +71,7 @@ function fillCell(x: number, y: number, clr: any) {
 function init() {
   resetSolution();
   if (!maze) maze = new Maze(100, 70);
-  const tt = Date.now()
   maze.generate();
-  console.log(Date.now() - tt);
   afterMazeGenerate();
 };
 
@@ -101,9 +99,9 @@ function afterMazeGenerate() {
       // walls
       let wall_index = (y * maze.width + x) * 2;
       let wall = maze.data[wall_index]
-      if (wall && wall.clr) fillWall(x, y, 1, 0, "white");
+      if (wall === 0) fillWall(x, y, 1, 0, "white");
       wall = maze.data[wall_index + 1]
-      if (wall && wall.clr) fillWall(x, y, 0, 1, "white");
+      if (wall === 0) fillWall(x, y, 0, 1, "white");
       // cells
       fillCell(x, y, "white");
     }
@@ -161,7 +159,7 @@ function afterSolutionGenerate(solution: { state: number[][], depth:number }, en
         tx >= 0 && tx < maze.width && 
         ty >= 0 && ty < maze.height && 
         state[ty][tx] === d - 1 &&
-        maze.data[wallr + walldiff[n]]!.clr
+        maze.data[wallr + walldiff[n]] === 0
       ) {
         x = tx;
         y = ty;
