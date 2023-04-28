@@ -43,7 +43,8 @@ function fillWall(x: number, y: number, wx: number, wy: number, clr: any) {
     ey = Math.floor((y + 1) * (maze_height - wall_width) / maze.height);
     y = Math.floor(y * (maze_height - wall_width) / maze.height);
     y += wall_width;
-  } else {
+  } 
+  else {
     y = Math.floor(y * (maze_height - wall_width) / maze.height);
     ey = y + wall_width;
   } 
@@ -54,7 +55,7 @@ function fillWall(x: number, y: number, wx: number, wy: number, clr: any) {
 
 function fillCell(x: number, y: number, clr: any) {
   let ex, ey;
-  
+
   ex = Math.floor((x + 1) * (maze_width - wall_width) / maze.width);
   x = Math.floor(x * (maze_width - wall_width) / maze.width) + wall_width;
 
@@ -70,7 +71,7 @@ function fillCell(x: number, y: number, clr: any) {
 */
 function init() {
   resetSolution();
-  if (!maze) maze = new Maze(100, 70);
+  if (!maze) maze = new Maze();
   maze.generate();
   afterMazeGenerate();
 };
@@ -171,7 +172,7 @@ function afterSolutionGenerate(solution: { state: number[][], depth:number }, en
   }
 }
 
-init();
+// init();
 
 (<any>document.querySelector("#new-maze")).onclick = init;
 (<any>document.querySelector("#new-sol")).onclick = initSolution;

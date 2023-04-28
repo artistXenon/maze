@@ -1,5 +1,6 @@
 export default class Union {
     private array: number[];
+
     constructor(size: number) {
         this.array = new Array(size).fill(-1);
     }
@@ -9,7 +10,7 @@ export default class Union {
     * Union-find implementation
     * so we know when removing a wall will connect disconnected parts of the maze 
     */
-    find(cell: number) {
+    public find(cell: number) {
         let t: number;
         const paths: number[] = [];
         // find root
@@ -26,7 +27,7 @@ export default class Union {
         return cell;
     }
 
-    union(cell1: number, cell2: number) {
+    public union(cell1: number, cell2: number) {
         let 
             i = this.find(cell1),
             j = this.find(cell2);

@@ -2,11 +2,12 @@ import Maze from "./maze.js";
 
 export default class Solver {
     private maze: Maze;
+
     constructor(maze: Maze) {
         this.maze = maze;
     }
 
-    generateDepthMap(start = { x: this.maze.width - 1, y: 0 }): { state: number[][], depth: number } | undefined {
+    public generateDepthMap(start = { x: this.maze.width - 1, y: 0 }): { state: number[][], depth: number } | undefined {
         if (!this.maze.data) return;
         const walldiff = [1 - this.maze.width * 2, 0, -2, 1]; // (0, -1)h, (0, 0)v, (-1, 0)v, (1, 0)h
         const neighbour_pos = [[0, -1], [1, 0], [-1, 0], [0, 1]];

@@ -45,14 +45,14 @@ export default class Maze {
         }
     }
 
-    setWall(wall_pos: WallPosition, wall: number) {
+    private setWall(wall_pos: WallPosition, wall: number) {
         const { x, y, vertical } = wall_pos;
         if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             this.data[(y * this.width + x) * 2 + (vertical ? 0 : 1)] = wall;
         }
     }
 
-    getWall(wall_pos: WallPosition): number {
+    private getWall(wall_pos: WallPosition): number {
         const { x, y, vertical } = wall_pos;
         if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             return this.data[(y * this.width + x) * 2 + (vertical ? 0 : 1)];
@@ -60,7 +60,7 @@ export default class Maze {
         return -1;
     }
 
-    getNeighbours(wall_pos: WallPosition): WallPosition[] {
+    private getNeighbours(wall_pos: WallPosition): WallPosition[] {
         const { x, y, vertical } = wall_pos;
         return vertical ? [
             { x, y: y - 1, vertical: false },
@@ -90,20 +90,20 @@ export default class Maze {
      * 3 5
      *  4
      */
-    getWallType(w: WallPosition) {
+    private getWallType(w: WallPosition) {
         const wall_neighbours = this.getNeighbours(w);
         const t1 = this.getWallEndType(wall_neighbours[0], wall_neighbours[1], wall_neighbours[2]);
         const t2 = this.getWallEndType(wall_neighbours[3], wall_neighbours[4], wall_neighbours[5]);
         return t1 * 3 + t2;
     }
 
-    getWallEndType(...w: WallPosition[]) {
+    private getWallEndType(...w: WallPosition[]) {
         const c = w.map(wall => this.getWall(wall) === 0);
         if (c[0] === c[2]) return c[0] ? 2 : 0;
         else return c[1] ? 2 : 1;
     }
 
-    generate() {
+    public generate() {
         this.wallqs = [
             [], [], [],
             [], [], [],
@@ -189,7 +189,7 @@ export default class Maze {
         console.log(perf);
     }
 
-    toString() {
+    public toString() {
         return JSON.stringify({
             size: this.width,
             data: this.data,
@@ -197,7 +197,7 @@ export default class Maze {
         })
     }
 
-    static fromString(str: string) {
+    public static fromString(str: string) {
         const o = JSON.parse(str);
         if (!(
             o.size && o.data && 
