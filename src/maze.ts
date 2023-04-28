@@ -52,7 +52,7 @@ export default class Maze {
         }
     }
 
-    private getWall(wall_pos: WallPosition): number {
+    public getWall(wall_pos: WallPosition): number {
         const { x, y, vertical } = wall_pos;
         if (x >= 0 && x < this.width && y >= 0 && y < this.height) {
             return this.data[(y * this.width + x) * 2 + (vertical ? 0 : 1)];
@@ -99,8 +99,9 @@ export default class Maze {
 
     private getWallEndType(...w: WallPosition[]) {
         const c = w.map(wall => this.getWall(wall) === 0);
-        if (c[0] === c[2]) return c[0] ? 2 : 0;
-        else return c[1] ? 2 : 1;
+        return c[0] === c[2] ? 
+            (c[0] ? 2 : 0) : 
+            (c[1] ? 2 : 1);
     }
 
     public generate() {
@@ -159,29 +160,29 @@ export default class Maze {
                 const chunk = chunks[i]
                 if (w < chunk) break;
                 w -= chunk;
-            }
+                }
 
             //pop a wall from the queue and try to remove it
             const wall_pos = this.wallqs[i].pop()!;
-            const wall = this.getWall(wall_pos);
-            const wall_type = this.getWallType(wall_pos);
-
-            // try to remove wall
+                const wall = this.getWall(wall_pos);
+                const wall_type = this.getWallType(wall_pos);
+                    
+                // try to remove wall
             if (wall === 1 && wall_type === i) {
-                const c1 = wall_pos.y * this.width + wall_pos.x;
-                const c2 = c1 + (wall_pos.vertical ? 1 : this.width);
+                    const c1 = wall_pos.y * this.width + wall_pos.x;
+                    const c2 = c1 + (wall_pos.vertical ? 1 : this.width);
 
-                if (!this.union.union(c1, c2)) continue;
+                    if (!this.union.union(c1, c2)) continue;
 
-                const neighbours = this.getNeighbours(wall_pos);
+                    const neighbours = this.getNeighbours(wall_pos);
                 for (let i = 0; i < 6; i++) {
-                    this.setWall(wall_pos, 1);
+                        this.setWall(wall_pos, 1);
                     const n_type = this.getWallType(neighbours[i]);
-                    this.setWall(wall_pos, 0);
+                        this.setWall(wall_pos, 0);
                     const neighbour = this.getWall(neighbours[i]);
-                    if (neighbour === -1) continue;
+                        if (neighbour === -1) continue;
                     const typ = this.getWallType(neighbours[i]);
-                    if (typ <= n_type) continue;
+                        if (typ <= n_type) continue;
                     randomInsert(this.wallqs[typ], neighbours[i]);
                 }
             }
