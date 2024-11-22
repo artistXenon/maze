@@ -71,7 +71,7 @@ function fillCell(x: number, y: number, clr: any) {
 */
 function init() {
   resetSolution();
-  if (!maze) maze = new Maze();
+  if (!maze) maze = new Maze(800, 600);
   maze.generate();
   afterMazeGenerate();
 };
