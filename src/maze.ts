@@ -5,9 +5,8 @@ interface WallPosition {
     y: number;
     vertical: boolean;
 }
-
 export default class Maze {
-    public width: number; 
+    public width: number;
     public height: number;
     public weights: number[];
     public data: number[];
@@ -22,13 +21,13 @@ export default class Maze {
     private union: Union = new Union(0);
 
     constructor(
-        w = 27, h = 18, 
-        weights = 
-        [
-            12, 10, 14,
-            10, 10, 8,
-            14, 8, 2
-        ], 
+        w = 27, h = 18,
+        weights =
+            [
+                12, 10, 14,
+                10, 10, 8,
+                14, 8, 2
+            ],
         data?: number[]
     ) {
         const size = w * h * 2;
@@ -106,7 +105,7 @@ export default class Maze {
     }
 
     private getWallEndType(...w: WallPosition[]) {
-        const [ c0, c1, c2, c3, c4, c5 ] = w.map(wall => this.getWall(wall) === 0);
+        const [c0, c1, c2, c3, c4, c5] = w.map(wall => this.getWall(wall) === 0);
         const type1 = (c0 === c2) ? (c0 ? 2 : 0) : (c1 ? 2 : 1);
         const type2 = (c3 === c5) ? (c3 ? 2 : 0) : (c4 ? 2 : 1);
         return type1 * 3 + type2;
@@ -123,9 +122,9 @@ export default class Maze {
         let w, chunks = new Array(9);
         while (true) {
             if (perf % 1000 === 0) {
-                console.log("updateWall", 
-                    this.wallqs[0].length, this.wallqs[1].length, this.wallqs[2].length, 
-                    this.wallqs[3].length, this.wallqs[4].length, this.wallqs[5].length, 
+                console.log("updateWall",
+                    this.wallqs[0].length, this.wallqs[1].length, this.wallqs[2].length,
+                    this.wallqs[3].length, this.wallqs[4].length, this.wallqs[5].length,
                     this.wallqs[6].length, this.wallqs[7].length, this.wallqs[8].length
                 )
             }
@@ -194,13 +193,13 @@ export default class Maze {
                     this.data[i] = -1;
                 }
                 return { x, y, vertical };
-        });
+            });
 
-        let qi = array.length - 1, 
+        let qi = array.length - 1,
             wi = invalid_walls.length - 1;
         while (--wi > 0 && --qi > 0) {
             if (qi === invalid_walls[wi]) continue;
-            [ array[invalid_walls[wi]], array[qi] ] = [ array[invalid_walls[wi]], array[qi] ];
+            [array[invalid_walls[wi]], array[qi]] = [array[invalid_walls[wi]], array[qi]];
         }
         this.wallqs[0].length = qi;
 
@@ -210,16 +209,29 @@ export default class Maze {
             let randomIndex = Math.floor(Math.random() * currentIndex);
             currentIndex--;
 
-            [ array[currentIndex], array[randomIndex] ] = [ array[randomIndex], array[currentIndex] ];
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
         }
 
         this.wallqs[0] = array;
     }
 
     public toString() {
+        const data_length = this.data.length;
+        const uint8_array = new Uint8Array(Math.ceil(data_length / 8));
+        for (let i = 0; i < uint8_array.length; i++) {
+          let value = 0;
+          for (let j = 0; j < 8; j++) {
+            value = value << 1;
+            if (this.data[8 * i + j] !== 0) value |= 1;
+          }
+          uint8_array[i] = value;
+        }
+        const base64 = btoa( String.fromCodePoint(...uint8_array) );
         return JSON.stringify({
-            size: this.width,
-            data: this.data,
+            width: this.width,
+            height: this.height,
+            data: base64,
+            length: data_length,
             weights: this.weights
         })
     }
@@ -227,14 +239,28 @@ export default class Maze {
     public static fromString(str: string) {
         const o = JSON.parse(str);
         if (!(
-            o.size && o.data && 
-            typeof o.size === "number" && 
-            Array.isArray(o.data) && 
-            o.data.length % (o.size * 2) === 0
+            o.width && o.height && o.data && o.length &&
+            typeof o.width === "number" &&
+            typeof o.height === "number" &&
+            typeof o.length === "number"
         )) {
             throw new Error("corrupt serialization");
         }
-        return new Maze(o.size, o.data.length / (o.size * 2), o.weights, o.data);
+
+        const string_buffer = atob(o.data);
+        const data = new Array(Math.ceil(length / 8) * 8);
+
+        for (let i = 0; i < string_buffer.length; i++) {
+            let code = string_buffer.charCodeAt(i);
+            for (let j = 7; j >= 0; j--) {
+              data[i * 8 + j] = code & 1;
+              code = code >> 1;
+            }
+        }
+        data.length = o.length;
+        console.log(data);
+
+        return new Maze(o.width, o.height, o.weights, data);
     }
 }
 
@@ -253,6 +279,6 @@ function randomInsert<T>(arr: T[], item: T): void {
         to_insert = replaces;
         prev_index = target_index;
         target_index = prev_index + ((arr.length - prev_index) >>> 1);
-    } while (prev_index !== arr.length - 1); 
+    } while (prev_index !== arr.length - 1);
 }
 

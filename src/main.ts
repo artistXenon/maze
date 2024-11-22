@@ -71,9 +71,10 @@ function fillCell(x: number, y: number, clr: any) {
 */
 function init() {
   resetSolution();
-  if (!maze) maze = new Maze(800, 600);
+  if (!maze) maze = new Maze(13, 7);
   maze.generate();
   afterMazeGenerate();
+  (<any> window).maze = maze;
 };
 
 /*
@@ -177,3 +178,4 @@ function afterSolutionGenerate(solution: { state: number[][], depth:number }, en
 (<any>document.querySelector("#new-maze")).onclick = init;
 (<any>document.querySelector("#new-sol")).onclick = initSolution;
 (<any>document.querySelector("#dest-sol")).onclick = resetSolution;
+(<any> window).Maze = Maze;
