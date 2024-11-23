@@ -71,7 +71,8 @@ function fillCell(x: number, y: number, clr: any) {
 */
 function init() {
   resetSolution();
-  if (!maze) maze = new Maze(13, 7);
+  if (!maze) maze = new Maze(23456421, 10, 7);
+  //if (!maze) maze = new Maze(960, 540);
   maze.generate();
   afterMazeGenerate();
   (<any> window).maze = maze;

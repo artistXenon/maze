@@ -1,4 +1,5 @@
-import Union from "./union.js"
+import Union from "./union.js";
+import seedrandom from "seedrandom";
 
 interface WallPosition {
     x: number;
@@ -9,7 +10,10 @@ export default class Maze {
     public width: number;
     public height: number;
     public weights: number[];
+    public seed: number;
     public data: number[];
+
+    private random: () => number;
 
     // private
     private wallqs: WallPosition[][] = [
@@ -21,6 +25,7 @@ export default class Maze {
     private union: Union = new Union(0);
 
     constructor(
+        seed: number,
         w = 27, h = 18,
         weights =
             [
@@ -33,6 +38,8 @@ export default class Maze {
         const size = w * h * 2;
         this.width = w;
         this.height = h;
+        this.seed = seed;
+        this.random = seedrandom(String(seed));
 
         if (data && data.length === size) this.data = data;
         else this.data = new Array(size);
@@ -42,6 +49,19 @@ export default class Maze {
         for (let i = 0; i < this.weights.length; i++) {
             this.weights[i] = Math.pow(2.0, this.weights[i] * 0.5);
         }
+    }
+
+    private randomInsert<T>(arr: T[], item: T): void {
+        arr.length++;
+        let to_insert = item, replaces;
+        let prev_index = 0, target_index = prev_index + Math.floor(this.random() * (arr.length - prev_index));
+        do {
+            replaces = arr[target_index];
+            arr[target_index] = to_insert;
+            to_insert = replaces;
+            prev_index = target_index;
+            target_index = prev_index + ((arr.length - prev_index) >>> 1);
+        } while (prev_index !== arr.length - 1);
     }
 
     private pos2Index(wall_pos: WallPosition): number {
@@ -138,7 +158,7 @@ export default class Maze {
 
             if (w === 0) break;
 
-            w *= Math.random();
+            w *= this.random();
             let i = 0;
             for (i = 0; i < 8; i++) {
                 const chunk = chunks[i]
@@ -168,7 +188,7 @@ export default class Maze {
                     if (neighbour === -1) continue;
                     const typ = this.getWallType(neighbours[i]);
                     if (typ <= n_type) continue;
-                    randomInsert(this.wallqs[typ], neighbours[i]);
+                    this.randomInsert(this.wallqs[typ], neighbours[i]);
                 }
             }
         }
@@ -176,26 +196,26 @@ export default class Maze {
     }
 
     public prepareQueue() {
+        this.random = seedrandom(String(this.seed));
         this.data.fill(1);
         const invalid_walls = new Array(this.width + this.height);
-        const dummy_wallpos = { x: -1, y: -1, vertical: false };
-        let array = new Array(this.data.length)
-            .fill(dummy_wallpos)
-            .map((_, i) => {
-                let ci = i;
-                let vertical = ci % 2 === 0;
-                if (!vertical) ci--;
-                ci /= 2;
-                let x = ci % this.width;
-                let y = Math.floor(ci / this.width);
-                if ((vertical && x === this.width - 1) || (!vertical && y === this.height - 1)) {
-                    invalid_walls.push(i);
-                    this.data[i] = -1;
-                }
-                return { x, y, vertical };
-            });
-
-        let qi = array.length - 1,
+        // PERF: we don't need complete copy for a map. 
+        // TODO: fix this
+        let array = new Array(this.data.length);
+        for (let i = 0; i < array.length; i++) {
+            let ci = i;
+            let vertical = ci % 2 === 0;
+            if (!vertical) ci--;
+            ci /= 2;
+            let x = ci % this.width;
+            let y = Math.floor(ci / this.width);
+            if ((vertical && x === this.width - 1) || (!vertical && y === this.height - 1)) {
+                invalid_walls.push(i);
+                this.data[i] = -1;
+            }
+            array[i] = { x, y, vertical };
+        }
+         let qi = array.length - 1,
             wi = invalid_walls.length - 1;
         while (--wi > 0 && --qi > 0) {
             if (qi === invalid_walls[wi]) continue;
@@ -206,7 +226,7 @@ export default class Maze {
         let currentIndex = array.length;
 
         while (currentIndex !== 0) {
-            let randomIndex = Math.floor(Math.random() * currentIndex);
+            let randomIndex = Math.floor(this.random() * currentIndex);
             currentIndex--;
 
             [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
@@ -216,22 +236,10 @@ export default class Maze {
     }
 
     public toString() {
-        const data_length = this.data.length;
-        const uint8_array = new Uint8Array(Math.ceil(data_length / 8));
-        for (let i = 0; i < uint8_array.length; i++) {
-          let value = 0;
-          for (let j = 0; j < 8; j++) {
-            value = value << 1;
-            if (this.data[8 * i + j] !== 0) value |= 1;
-          }
-          uint8_array[i] = value;
-        }
-        const base64 = btoa( String.fromCodePoint(...uint8_array) );
         return JSON.stringify({
             width: this.width,
             height: this.height,
-            data: base64,
-            length: data_length,
+            seed: this.seed,
             weights: this.weights
         })
     }
@@ -247,38 +255,7 @@ export default class Maze {
             throw new Error("corrupt serialization");
         }
 
-        const string_buffer = atob(o.data);
-        const data = new Array(Math.ceil(length / 8) * 8);
-
-        for (let i = 0; i < string_buffer.length; i++) {
-            let code = string_buffer.charCodeAt(i);
-            for (let j = 7; j >= 0; j--) {
-              data[i * 8 + j] = code & 1;
-              code = code >> 1;
-            }
-        }
-        data.length = o.length;
-        console.log(data);
-
-        return new Maze(o.width, o.height, o.weights, data);
+        return new Maze(o.seed, o.width, o.height, o.weights);
     }
-}
-
-
-/*
-* # util
-* Add an element to a randomly permuted array
-*/
-function randomInsert<T>(arr: T[], item: T): void {
-    arr.length++;
-    let to_insert = item, replaces;
-    let prev_index = 0, target_index = prev_index + Math.floor(Math.random() * (arr.length - prev_index));
-    do {
-        replaces = arr[target_index];
-        arr[target_index] = to_insert;
-        to_insert = replaces;
-        prev_index = target_index;
-        target_index = prev_index + ((arr.length - prev_index) >>> 1);
-    } while (prev_index !== arr.length - 1);
 }
 
