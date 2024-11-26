@@ -1,9 +1,8 @@
 import Maze from './maze';
-import Solver from './solver';
 import './style.css'
 
 
-let maze: Maze, solver: Solver;
+let maze: Maze;
 
 //slider values
 
@@ -71,7 +70,7 @@ function fillCell(x: number, y: number, clr: any) {
 */
 function init() {
   resetSolution();
-  if (!maze) maze = new Maze(23456421, 10, 7);
+  maze = new Maze(Math.random() * 65535, 100, 60);
   //if (!maze) maze = new Maze(960, 540);
   maze.generate();
   afterMazeGenerate();
@@ -129,48 +128,26 @@ function resetSolution() {
 function initSolution() {
   resetSolution();
 
-  if (!solver) solver = new Solver(maze);
 
-  const depthMap = solver.generateDepthMap();
+  const depthMap = maze.solve();
   if (!depthMap) return;
   afterSolutionGenerate(depthMap);
 }
 
-function afterSolutionGenerate(solution: { state: number[][], depth:number }, end = { x: 0, y: maze.height - 1 }) {
-  const { state, depth } = solution;
-  const neighbour_pos = [[0, -1], [1, 0], [-1, 0], [0, 1]];
-  const walldiff = [1 - maze.width * 2, 0, -2, 1]; // (0, -1)h, (0, 0)v, (-1, 0)v, (1, 0)h
+function afterSolutionGenerate(solution: { depth_map: number[][], depth:number, path: number[][] }) {
+  console.log(solution);
+  const { depth_map, depth, path } = solution;
 
   for (let y = 0; y < maze.height; y++) {
     for (let x = 0; x < maze.width; x++) {
-      fillCell(x, y, "hsl(" + (360 * state[y][x] / depth) + "deg, 80%, 70%)");
+      if (depth_map[y][x] === 0) continue;
+      fillCell(x, y, "hsl(" + (360 * depth_map[y][x] / depth) + "deg, 80%, 70%)");
     }
   }
 
-  //draw solution
-  let x = end.x;
-  let y = end.y;
-  while (true) {
-    fillCell(x, y, "#000");
-    const d = state[y][x];
-    const wallr = (y * maze.width + x) * 2;
-    let brk = false;
-    for (let n = 0; n < 4; n++) {
-      const tx = x + neighbour_pos[n][0];
-      const ty = y + neighbour_pos[n][1];
-      if (
-        tx >= 0 && tx < maze.width && 
-        ty >= 0 && ty < maze.height && 
-        state[ty][tx] === d - 1 &&
-        maze.data[wallr + walldiff[n]] === 0
-      ) {
-        x = tx;
-        y = ty;
-        break;
-      }
-      if (n === 3) brk = true;
-    }
-    if (brk) break;
+  for (let i = path.length - 1; i > 0 ; --i) {
+    if (!path[i]) continue;
+    fillCell(path[i][0], path[i][1], "#000");
   }
 }
 

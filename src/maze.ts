@@ -131,6 +131,44 @@ export default class Maze {
         return type1 * 3 + type2;
     }
 
+    private prepareQueue() {
+        this.random = seedrandom(String(this.seed));
+        this.data.fill(1);
+        const invalid_walls = new Array(this.width + this.height);
+        let array = new Array(this.data.length);
+        for (let i = 0; i < array.length; i++) {
+            let ci = i;
+            let vertical = ci % 2 === 0;
+            if (!vertical) ci--;
+            ci /= 2;
+            let x = ci % this.width;
+            let y = Math.floor(ci / this.width);
+            if ((vertical && x === this.width - 1) || (!vertical && y === this.height - 1)) {
+                invalid_walls.push(i);
+                this.data[i] = -1;
+            }
+            array[i] = { x, y, vertical };
+        }
+         let qi = array.length - 1,
+            wi = invalid_walls.length - 1;
+        while (--wi > 0 && --qi > 0) {
+            if (qi === invalid_walls[wi]) continue;
+            [array[invalid_walls[wi]], array[qi]] = [array[invalid_walls[wi]], array[qi]];
+        }
+        this.wallqs[0].length = qi;
+
+        let currentIndex = array.length;
+
+        while (currentIndex !== 0) {
+            let randomIndex = Math.floor(this.random() * currentIndex);
+            currentIndex--;
+
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+
+        this.wallqs[0] = array;
+    }
+
     public generate() {
         let perf_time = performance.now();
         this.prepareQueue();
@@ -195,44 +233,83 @@ export default class Maze {
         console.log(perf, Math.floor(performance.now() - perf_time));
     }
 
-    public prepareQueue() {
-        this.random = seedrandom(String(this.seed));
-        this.data.fill(1);
-        const invalid_walls = new Array(this.width + this.height);
-        // PERF: we don't need complete copy for a map. 
-        // TODO: fix this
-        let array = new Array(this.data.length);
-        for (let i = 0; i < array.length; i++) {
-            let ci = i;
-            let vertical = ci % 2 === 0;
-            if (!vertical) ci--;
-            ci /= 2;
-            let x = ci % this.width;
-            let y = Math.floor(ci / this.width);
-            if ((vertical && x === this.width - 1) || (!vertical && y === this.height - 1)) {
-                invalid_walls.push(i);
-                this.data[i] = -1;
+    public solve(greedy_depth_map: boolean = false, start = { x: this.width - 1, y: 0 }, end = { x: 0, y: this.height - 1 }): { depth_map: number[][], depth: number, path: number[][] } | undefined {
+        const walldiff = [1 - this.width * 2, 0, -2, 1]; // (0, -1)h, (0, 0)v, (-1, 0)v, (1, 0)h
+        const neighbour_pos = [[0, -1], [1, 0], [-1, 0], [0, 1]];
+
+        const depth_map = new Array(this.height);
+        
+        for (let y = 0; y < this.height; y++) {
+            depth_map[y] = new Array(this.width).fill(0);
+        }
+        let level = [[start.x, start.y]];
+        depth_map[start.y][start.x] = 1;
+
+        let depth = 1, treeCount = 1;
+        let brk = false;
+
+        while (!brk) {
+            depth++;
+            const oldLevel = level;
+            level = [];
+
+            for (let i = 0; i < oldLevel.length; ++i) {
+                const [ cx, cy ] = oldLevel[i];
+                const wallr = (cy * this.width + cx) * 2;
+                for (let n = 0; n < 4; n++) {
+                    const tx = cx + neighbour_pos[n][0];
+                    const ty = cy + neighbour_pos[n][1];
+                    if (
+                        tx >= 0 && tx < this.width && 
+                        ty >= 0 && ty < this.height && 
+                        depth_map[ty][tx] === 0 &&
+                        this.data[wallr + walldiff[n]] === 0
+                    ) {
+                        treeCount++;
+                        level.push([tx, ty]);
+                        depth_map[ty][tx] = depth;
+                        // TODO: think of the logic. idk wtf smh
+                        if (!greedy_depth_map && tx === end.x && ty === end.y) {
+                            brk = true;
+                            break;
+                        } 
+                    }
+                }
+                if (brk) break;
             }
-            array[i] = { x, y, vertical };
-        }
-         let qi = array.length - 1,
-            wi = invalid_walls.length - 1;
-        while (--wi > 0 && --qi > 0) {
-            if (qi === invalid_walls[wi]) continue;
-            [array[invalid_walls[wi]], array[qi]] = [array[invalid_walls[wi]], array[qi]];
-        }
-        this.wallqs[0].length = qi;
 
-        let currentIndex = array.length;
-
-        while (currentIndex !== 0) {
-            let randomIndex = Math.floor(this.random() * currentIndex);
-            currentIndex--;
-
-            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            const fullTree = treeCount === this.data.length / 2;
+            if (brk || fullTree || level.length === 0) break;
         }
 
-        this.wallqs[0] = array;
+
+        brk = false;
+        let path = new Array(depth);
+        let { x, y }  = end;
+        for (let i = depth - 1; i >= 0; --i) {
+            path[i] = [x, y];
+            const d = depth_map[y][x];
+            const wallr = (y * this.width + x) * 2;
+            for (let n = 0; n < 4; n++) {
+                const tx = x + neighbour_pos[n][0];
+                const ty = y + neighbour_pos[n][1];
+                if (
+                    tx >= 0 && tx < this.width && 
+                    ty >= 0 && ty < this.height && 
+                    depth_map[ty][tx] === d - 1 &&
+                    this.data[wallr + walldiff[n]] === 0
+                ) {
+                    x = tx;
+                    y = ty;
+                    break;
+                }
+                if (n === 3) brk = true;
+            }
+            if (brk) break;
+        }
+
+
+        return { depth_map, depth, path };
     }
 
     public toString() {
@@ -247,10 +324,9 @@ export default class Maze {
     public static fromString(str: string) {
         const o = JSON.parse(str);
         if (!(
-            o.width && o.height && o.data && o.length &&
+            o.width && o.height && o.data && o.seed &&
             typeof o.width === "number" &&
-            typeof o.height === "number" &&
-            typeof o.length === "number"
+            typeof o.height === "number"
         )) {
             throw new Error("corrupt serialization");
         }
